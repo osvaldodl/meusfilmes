@@ -2,8 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.cabral.marinho.meusfilmes">
 
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
         android:allowBackup="true"
@@ -12,17 +12,23 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".InicioActivity">
+        <activity android:name=".InicioActivity"
+            android:label="@string/title_inicio">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ListaActivity" />
-        <activity android:name=".HistoricoActivity" />
-        <activity android:name=".FavoritosActivity" />
-        <activity android:name=".CreditosActivity"></activity>
+        <activity android:name=".ListaActivity"
+            android:label="@string/title_lista"/>
+        <activity android:name=".HistoricoActivity"
+            android:label="@string/title_historico"/>
+        <activity android:name=".FavoritosActivity"
+            android:label="@string/title_favoritos"/>
+        <activity android:name=".CreditosActivity"
+            android:label="@string/title_creditos"/>
+
     </application>
 
 </manifest>
