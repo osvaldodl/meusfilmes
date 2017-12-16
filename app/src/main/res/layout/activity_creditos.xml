@@ -4,35 +4,58 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/black"
     tools:context="com.cabral.marinho.meusfilmes.CreditosActivity">
 
-    <ImageView
-        android:id="@+id/imageCreditos"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/textCreditos"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@mipmap/ic_launcher" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/textCreditos"
-        android:layout_width="wrap_content"
-        android:layout_height="19dp"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:text="Créditos:"
-        android:textAlignment="center"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/imageCreditos" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
 
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="30dp" />
+
+            <ImageButton
+                android:id="@+id/imageCreditos"
+                android:layout_width="wrap_content"
+                android:layout_height="200dp"
+                android:background="@drawable/capa_transparente"
+                android:scaleType="fitCenter"
+                android:onClick="seguirTheMovie"
+                app:srcCompat="@drawable/themoviedb" />
+
+            <TextView
+                android:id="@+id/textCreditos"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="\nCréditos\n"
+                android:textAlignment="center"
+                android:textColor="@android:color/white"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toTopOf="@+id/buttonInicio"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintHorizontal_bias="0.501"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/imageCreditos" />
+
+            <TextView
+                android:id="@+id/textView3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text='Todas informações contidas neste app são fornecidas por The Movie DB. Para mais informações, acessar "www.themoviedb.org/".\nEste aplicativo foi desenvolvido por Marinho e Osvaldo :-) '
+                android:textAlignment="center"
+                android:textColor="@android:color/white"
+                app:layout_constraintBottom_toBottomOf="@+id/textCreditos"
+                app:layout_constraintTop_toTopOf="@+id/buttonInicio" />
+
+        </LinearLayout>
+    </ScrollView>
 
 </android.support.constraint.ConstraintLayout>

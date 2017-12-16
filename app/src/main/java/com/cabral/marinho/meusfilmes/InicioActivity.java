@@ -1,135 +1,219 @@
 package com.cabral.marinho.meusfilmes;
 
+import android.annotation.SuppressLint;
+import android.app.ActionBar;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
+import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
-import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.design.widget.BottomNavigationView;
+import android.os.StrictMode;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ProgressBar;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+
+import static android.widget.Toast.LENGTH_SHORT;
 
 public class InicioActivity extends AppCompatActivity {
 
-    private Button button_credito;
-    private JSONArray dados;
+    private FilmeDao filmeDao;
+    private Button buttonLista;
+    private Button buttonHistorico;
+    private Button buttonFavotitos;
+    private Button buttonCreditos;
+    private List<Filme> filmes = new ArrayList<Filme>();
+    private String link = "https://api.themoviedb.org/3/discover/movie?api_key=bad51705c7756f9ffdc7d3dc37b7aad2&sort_by=popularity.desc&language=pt-BR&page=";
+    private int httpResponse;
+    private boolean atualizou;
+    private static final int qtdPag = 25;
 
-    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
-            = new BottomNavigationView.OnNavigationItemSelectedListener() {
-
-        @Override
-        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-            switch (item.getItemId()) {
-                case R.id.navigation_lista:
-                    mostrarLista();
-                    return true;
-                case R.id.navigation_favorito:
-                   mostrarFavoritos();
-                    return true;
-                case R.id.navigation_historico:
-                    mostrarHistorico();
-                    return true;
-            }
-            return false;
-        }
-    };
-
+    @SuppressLint("WrongConstant")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_inicio);
+        buttonLista = (Button) findViewById(R.id.buttonLista);
+        buttonHistorico = (Button) findViewById(R.id.buttonHistorico);
+        buttonFavotitos = (Button) findViewById(R.id.buttonFavoritos);
+        buttonCreditos = (Button) findViewById(R.id.buttonCreditos);
 
-        button_credito = (Button) findViewById(R.id.button_credito);
+        class DownloaderTask extends AsyncTask<String, Void, List<JSONObject>> {
 
-        DownloaderTask atualizar = new DownloaderTask();
-        atualizar.execute("https://api.themoviedb.org/3/discover/movie?api_key=bad51705c7756f9ffdc7d3dc37b7aad2&sort_by=popularity.desc");
+            ProgressDialog progressDialog;
 
-        BottomNavigationView navigation = (BottomNavigationView) findViewById(R.id.navigation);
-        navigation.setOnNavigationItemSelectedListener(mOnNavigationItemSelectedListener);
+            @Override
+            protected void onPreExecute() {
+                InicioActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LOCKED);
+                progressDialog = new ProgressDialog(InicioActivity.this);
+                progressDialog.setTitle("Atualizando");
+                progressDialog.setMessage("Aguarde...");
+                progressDialog.show();
+            }
 
+            protected void onPostExecute(List<JSONObject> paginas) {
+                int qtdPaginas = paginas.size();
+                if(qtdPaginas > 0){
+                    removeFilmes();
+                    for(int i = 0; i < qtdPaginas; i++){
+                        try {
+                            JSONArray jsonArray = paginas.get(i).getJSONArray("results");
+                            for (int j = 0; j < jsonArray.length(); j++) {
+                                JSONObject obj = jsonArray.getJSONObject(j);
+                                filmeDao.insert(Filme.fromJSON(obj));
+                            }
+                        }
+                        catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if(qtdPaginas == qtdPag){
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(InicioActivity.this);
+                        SharedPreferences.Editor editor = prefs.edit();
+                        atualizou = true;
+                        editor.putBoolean("atualizou", atualizou);
+                        editor.commit();
+                        progressDialog.setMessage("Concluído!");
+                        progressDialog.dismiss();
+                    }
+                    else{
+                        progressDialog.dismiss();
+                        Toast.makeText(InicioActivity.this, "Falha ao atualizar: a base de dados está incompleta", Toast.LENGTH_LONG).show();
+                    }
+                }
+                else{
+                    progressDialog.dismiss();
+                    buttonLista.setEnabled(false);
+                    buttonHistorico.setEnabled(false);
+                    buttonFavotitos.setEnabled(false);
+                    Toast.makeText(InicioActivity.this, "Falha ao atualizar! Verifique suas conexões de rede.", Toast.LENGTH_LONG).show();
+                }
+                InicioActivity.this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+            }
 
+            @Override
+            protected List<JSONObject> doInBackground(String... params) {
+                int qtdLinks = params.length;
+                List<JSONObject> paginas = new ArrayList<>();
+                for(int i = 0; i < qtdLinks; i++) {
+                    try {
+                        URL url = new URL(params[i]);
+                        HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+                        httpURLConnection.connect();
+                        httpResponse = httpURLConnection.getResponseCode();
+                        if (httpResponse == 200) {
+                            Log.i("BAIXANDO PÁGINA " + i + ": ", "Conexão bem sucedida!");
+                            String json = getString(httpURLConnection.getInputStream());
+                            Log.i("RESPOSTA: ", json);
+                            paginas.add(new JSONObject(json));
+                        } else
+                            Log.i("BAIXANDO PÁGINA " + i + ": ", "Falha na conexão!");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                    }
+                }
+                return paginas;
+            }
+
+            private String getString(InputStream in) throws IOException {
+                BufferedReader buffer = new BufferedReader(new InputStreamReader(in));
+                StringBuilder str = new StringBuilder();
+                String line = null;
+                while ((line = buffer.readLine()) != null) {
+                    str.append(line);
+                }
+                return str.toString();
+            }
+        }
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        atualizou = prefs.getBoolean("atualizou", false);
+        if(!atualizou){
+            filmeDao = new FilmeDao(this);
+            filmeDao.open();
+            String[] parametros = new String[qtdPag];
+            for(int i = 0; i < qtdPag; i++)
+                parametros[i] = link + Integer.toString(i + 1);
+            DownloaderTask downloaderTask =  new DownloaderTask();
+            downloaderTask.execute(parametros);
+        }
     }
 
-    public void mostrarLista() {
-        Intent intent = new Intent(this, ListaActivity.class);
+    @Override
+    protected void onDestroy() {
+        if(filmeDao != null)
+            filmeDao.close();
+        super.onDestroy();
+    }
+
+    public void mostrarLista(View v) {
+        Bundle bundle = new Bundle();
+        Intent intent = new Intent(InicioActivity.this, ListaActivity.class);
         startActivity(intent);
     }
 
-    public void mostrarHistorico() {
-        Intent intent = new Intent(this, HistoricoActivity.class);
+    public void mostrarHistorico(View v) {
+        Intent intent = new Intent(InicioActivity.this, HistoricoActivity.class);
         startActivity(intent);
     }
 
-    public void mostrarFavoritos() {
-        Intent intent = new Intent(this, FavoritosActivity.class);
+    public void mostrarFavoritos(View v) {
+        Intent intent = new Intent(InicioActivity.this, FavoritosActivity.class);
         startActivity(intent);
     }
 
     public void mostrarCréditos(View v) {
-        Intent intent = new Intent(this, CreditosActivity.class);
+        Intent intent = new Intent(InicioActivity.this, CreditosActivity.class);
         startActivity(intent);
     }
 
-    class DownloaderTask extends AsyncTask<String, Void, JSONArray> {
-
-        @Override
-        protected void onPreExecute(){
-            //Codigo
-        }
-
-        @Override
-        protected JSONArray doInBackground(String... params) {
-            try {
-                URL url = new URL(params[0]);
-                HttpURLConnection httpURLConnection = (HttpURLConnection)url.openConnection();
-                httpURLConnection.connect();
-                String json = getString(httpURLConnection.getInputStream());
-                if(httpURLConnection.getResponseCode() == 200){
-                    Log.i("Resultado: ", json);
-                }
-                else{
-                    Log.i("Resultado: ", "Falha ao atualizar");
-                }
-                return new JSONArray(json);
+    private void removeFilmes() {
+        List<Filme> filmes = filmeDao.getAll();
+        if (filmes != null && filmes.size() >= 1) {
+            for(int i = 0; i < filmes.size(); i++){
+                long id = filmes.get(i).getId();
+                filmeDao.remove(id);
             }
-            catch (IOException e) {
-                e.printStackTrace();
-            }
-            catch (JSONException e) {
-                e.printStackTrace();
-                e.toString();
-            }
-            return null;
-        }
-
-        protected void onPostExecute(Integer numero){
-            //Codigo
-        }
-
-        protected void onProgressUpdate(Integer params){
-            //Codigo
-        }
-
-        private String getString(InputStream in) throws IOException {
-            BufferedReader buffer = new BufferedReader(new InputStreamReader(in));
-            StringBuilder str = new StringBuilder();
-            String line = null;
-            while ((line = buffer.readLine()) != null) {
-                str.append(line);
-            }
-            return str.toString();
         }
     }
-}
+
+
+
+    }
+
+
+
